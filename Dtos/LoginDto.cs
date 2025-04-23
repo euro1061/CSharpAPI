@@ -1,6 +1,6 @@
 namespace QBackend.Dtos
 {
-    public partial class SigninDto
+    public partial class LoginDto
     {
         public string Username { get; set; } = null!;
 

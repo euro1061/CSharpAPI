@@ -9,13 +9,16 @@ using Dapper;
 using System.Data;
 using QBackend.Dtos;
 
-namespace QBackend.Helpers {
-    public class AuthHelper {
+namespace QBackend.Helpers
+{
+    public class AuthHelper
+    {
 
         private readonly IConfiguration _config;
         private readonly DataContextDapper _dapper;
 
-        public AuthHelper(IConfiguration config) { 
+        public AuthHelper(IConfiguration config)
+        {
             _config = config;
             _dapper = new DataContextDapper(config);
         }
@@ -33,9 +36,14 @@ namespace QBackend.Helpers {
             );
         }
 
-        public string CreateToken(int userId) {
+        public string CreateToken(int userId, string username, string firstName, string lastName, string role)
+        {
             Claim[] claims = new Claim[] {
-                new Claim("userId", userId.ToString())
+                new Claim("userId", userId.ToString()),
+                new Claim("username", username),
+                new Claim("firstName", firstName),
+                new Claim("lastName", lastName),
+                new Claim("role", role)
             };
 
             string? tokenKeyString = _config.GetSection("AppSettings:TokenKey").Value;
@@ -44,7 +52,8 @@ namespace QBackend.Helpers {
 
             SigningCredentials credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature);
 
-            SecurityTokenDescriptor descriptor = new SecurityTokenDescriptor(){
+            SecurityTokenDescriptor descriptor = new SecurityTokenDescriptor()
+            {
                 Subject = new ClaimsIdentity(claims),
                 Expires = DateTime.Now.AddDays(1),
                 SigningCredentials = credentials
@@ -57,8 +66,9 @@ namespace QBackend.Helpers {
             return tokenHandler.WriteToken(token);
         }
 
-        public string CreateDefaultPassword(string FirstName, string LastName) {
-            string password = FirstName +  "." + LastName.Substring(0, 3) + "1234";
+        public string CreateDefaultPassword(string FirstName, string LastName)
+        {
+            string password = FirstName + "." + LastName.Substring(0, 3) + "1234";
             return password;
         }
 
@@ -93,14 +103,14 @@ namespace QBackend.Helpers {
             return (hash, salt);
         }
 
-        public bool UpdateUserPassword(string userId, byte[] passwordHash, byte[] passwordSalt)
+        public async Task<bool> UpdateUserPasswordAsync(string userId, byte[] passwordHash, byte[] passwordSalt)
         {
             const string sql = "UPDATE [Users] SET [PasswordHash] = @PasswordHash, [PasswordSalt] = @PasswordSalt WHERE [UserId] = @UserId";
             var parameters = new DynamicParameters();
             parameters.Add("@PasswordHash", passwordHash, DbType.Binary);
             parameters.Add("@PasswordSalt", passwordSalt, DbType.Binary);
             parameters.Add("@UserId", int.Parse(userId), DbType.Int32);
-            return _dapper.ExecuteCommand(sql, parameters);
+            return await _dapper.ExecuteCommandAsync(sql, parameters);
         }
     }
 }

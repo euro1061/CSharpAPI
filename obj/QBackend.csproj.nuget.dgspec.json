@@ -1,25 +1,31 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\porrs\\Project\\mycsharp\\QProject\\QBackend\\QBackend.csproj": {}
+    "C:\\Users\\LT65070\\Desktop\\ChocoLearning\\CSharpAPI\\QBackend.csproj": {}
   },
   "projects": {
-    "C:\\Users\\porrs\\Project\\mycsharp\\QProject\\QBackend\\QBackend.csproj": {
+    "C:\\Users\\LT65070\\Desktop\\ChocoLearning\\CSharpAPI\\QBackend.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\porrs\\Project\\mycsharp\\QProject\\QBackend\\QBackend.csproj",
+        "projectUniqueName": "C:\\Users\\LT65070\\Desktop\\ChocoLearning\\CSharpAPI\\QBackend.csproj",
         "projectName": "QBackend",
-        "projectPath": "C:\\Users\\porrs\\Project\\mycsharp\\QProject\\QBackend\\QBackend.csproj",
-        "packagesPath": "C:\\Users\\porrs\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\porrs\\Project\\mycsharp\\QProject\\QBackend\\obj\\",
+        "projectPath": "C:\\Users\\LT65070\\Desktop\\ChocoLearning\\CSharpAPI\\QBackend.csproj",
+        "packagesPath": "C:\\Users\\LT65070\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\LT65070\\Desktop\\ChocoLearning\\CSharpAPI\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "C:\\Users\\porrs\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\LT65070\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -100,7 +106,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.202/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.203/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

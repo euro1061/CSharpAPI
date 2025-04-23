@@ -33,15 +33,18 @@ namespace QBackend.Controllers
 
         [AllowAnonymous]
         [HttpPost("Signup")]
-        public IActionResult Signup(SignupDto user)
+        public async Task<IActionResult> Signup(SignupDto user)
         {
-            string sqlCheckExistingUser = "SELECT Username FROM [Users] WHERE [Username] = @Username";
+            string sqlCheckExistingUser = "EXEC sp_CheckUserExisting @Username";
 
             string password = _authHelper.CreateDefaultPassword(user.FirstName, user.LastName);
 
-            IEnumerable<string> existingUsers = _dapper.LoadData<string>(sqlCheckExistingUser, user);
+            DynamicParameters checkUserExistingParameters = new DynamicParameters();
+            checkUserExistingParameters.Add("@Username", user.Username, DbType.String);
 
-            if (existingUsers.Count() == 0)
+            int existingUsers = await _dapper.LoadDataSingleAsync<int>(sqlCheckExistingUser, checkUserExistingParameters);
+
+            if (existingUsers == 0)
             {
                 byte[] passwordSalt = new byte[128 / 8];
                 using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
@@ -59,7 +62,7 @@ namespace QBackend.Controllers
                 parameters.Add("@FirstName", user.FirstName, DbType.String);
                 parameters.Add("@LastName", user.LastName, DbType.String);
 
-                if (_dapper.ExecuteCommand(sqlInsertAuth, parameters))
+                if (await _dapper.ExecuteCommandAsync(sqlInsertAuth, parameters))
                 {
                     return HttpResponseHelper.Success(new { username = user.Username }, "User created successfully");
                 }
@@ -72,12 +75,19 @@ namespace QBackend.Controllers
 
         [AllowAnonymous]
         [HttpPost("Login")]
-        public IActionResult Login(SigninDto user)
+        public async Task<IActionResult> Login(LoginDto user)
         {
-            string sqlForHasAndSalt = "SELECT [PasswordHash], [PasswordSalt] FROM [Users] WHERE [Username] = '" + user.Username + "'";
+            if(!ModelState.IsValid) {
+                Console.WriteLine(ModelState);
+            }
 
-            UserConfirmation userLoginConfirmation = _dapper.LoadDataSingle<UserConfirmation>(sqlForHasAndSalt);
-
+            string sqlForHasAndSalt = "EXEC sp_GetPasswordUserByUsername @Username";
+            
+            DynamicParameters getPasswordParameters = new DynamicParameters();
+            getPasswordParameters.Add("@Username", user.Username, DbType.String);
+            
+            UserConfirmation? userLoginConfirmation = await _dapper.LoadDataSingleOrDefaultAsync<UserConfirmation?>(sqlForHasAndSalt, getPasswordParameters);
+            
             if (userLoginConfirmation == null)
             {
                 return HttpResponseHelper.Error("User not found", 404);
@@ -90,23 +100,33 @@ namespace QBackend.Controllers
                 return HttpResponseHelper.Error("Invalid Password", 401);
             }
 
-            int userId = _dapper.LoadDataSingle<int>("SELECT [UserId] FROM [Users] WHERE [Username] = '" + user.Username + "'");
+            string sqlGetUserProfile = @"EXEC sp_GetUserProfile @Username";
 
-            return HttpResponseHelper.Success(new { token = _authHelper.CreateToken(userId) }, "User logged in successfully");
+            DynamicParameters getUserProfileParameters = new DynamicParameters();
+            getUserProfileParameters.Add("@Username", user.Username, DbType.String);
+
+            UserProfile? userProfile = await _dapper.LoadDataSingleOrDefaultAsync<UserProfile>(sqlGetUserProfile, getUserProfileParameters);
+
+            if (userProfile == null)
+            {
+                return HttpResponseHelper.Error("User not found", 404);
+            }
+
+            return HttpResponseHelper.Success(new { token = _authHelper.CreateToken(userProfile.UserId, userProfile.Username, userProfile.FirstName, userProfile.LastName, userProfile.Role) }, "User logged in successfully");
         }
 
         [HttpGet("GetAllUsers")]
-        public IActionResult GetAllUsers()
+        public async Task<IActionResult> GetAllUsers()
         {
             string sql = "SELECT [UserId], [Username], [FirstName], [LastName], [Role], [AssignedCounterID] FROM [Users]";
 
-            IEnumerable<User> users = _dapper.LoadData<User>(sql);
+            IEnumerable<User> users = await _dapper.LoadDataAsync<User>(sql);
 
             return HttpResponseHelper.Success(users, "Users found");
         }
 
         [HttpPut("ChangePassword")]
-        public IActionResult ChangePassword(ChangePasswordDto user)
+        public async Task<IActionResult> ChangePassword(ChangePasswordDto user)
         {
             var userId = User.FindFirst("userId")?.Value;
             
@@ -138,7 +158,7 @@ namespace QBackend.Controllers
 
             var (newHash, newSalt) = _authHelper.GenerateNewPasswordHashAndSalt(user.NewPassword);
             
-            if (_authHelper.UpdateUserPassword(userId, newHash, newSalt))
+            if (await _authHelper.UpdateUserPasswordAsync(userId, newHash, newSalt))
             {
                 return HttpResponseHelper.Success(new { }, "Password changed successfully");
             }
@@ -146,16 +166,16 @@ namespace QBackend.Controllers
             return HttpResponseHelper.Error("Failed to change password", 400);
         }
 
-        [HttpGet("GetMeInformation")]
-        public IActionResult GetMeInformation()
+        [HttpGet("GetMeInfomation")]
+        public async Task<IActionResult> GetMeInformation()
         {
             string userId = User.FindFirst("userId")?.Value + "";
-            string sqlGetInfo = @"SELECT [UserId] ,[Username], [FirstName], [LastName], [Role], [AssignedCounterID] FROM [Users] WHERE [UserId] = @UserId";
+            string sqlGetInfo = @"EXEC sp_GetUserProfile '', @UserID";
 
             DynamicParameters parameters = new DynamicParameters();
-            parameters.Add("@UserId", int.Parse(userId), DbType.Int32);
+            parameters.Add("@UserID", int.Parse(userId), DbType.Int32);
 
-            User user = _dapper.LoadDataSingle<User>(sqlGetInfo, parameters);
+            UserProfile? user = await _dapper.LoadDataSingleOrDefaultAsync<UserProfile>(sqlGetInfo, parameters);
 
             if (user == null)
             {
@@ -166,13 +186,19 @@ namespace QBackend.Controllers
         }
 
         [HttpGet("RefreshToken")]
-        public IActionResult RefreshToken()
+        public async Task<IActionResult> RefreshToken()
         {
             string userId = User.FindFirst("userId")?.Value + "";
+            string username = User.FindFirst("username")?.Value ?? "";
+            string firstName = User.FindFirst("firstName")?.Value ?? "";
+            string lastName = User.FindFirst("lastName")?.Value ?? "";
+            string role = User.FindFirst("role")?.Value ?? "";
 
-            return Ok(new Dictionary<string, string>(){
-                {"token", _authHelper.CreateToken(int.Parse(userId))}
-            });
+            var result = new Dictionary<string, string>(){
+                {"token", _authHelper.CreateToken(int.Parse(userId), username, firstName, lastName, role)}
+            };
+
+            return await Task.FromResult(Ok(result));
         }
     }
 }
